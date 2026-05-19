@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>印迹 - 文艺沉浸式打字练习</title>
+    <style>
+        /* ---------------------------------------------------
+           文艺氛围感主题变量（默认：晨曦·护眼青绿模式）
+           --------------------------------------------------- */
+        :root {
+            --bg-global: #eef2ec;         /* 柔和护眼青绿底色 */
+            --bg-container: #f7faf5;      /* 浅色麦香书页 */
+            --bg-box: #e6ebe0;            /* 松烟绿茶色（上方文本区） */
+            --bg-input: #edf2e8;          /* 略清透的浅玉色（下方输入区） */
+            --text-main: #2b3324;         /* 深松烟墨 */
+            --text-muted: #5c6652;        /* 暮云青灰 */
+            --text-hint: #8fa083;         /* 未打字时的前景色 */
+            --accent: #5e7251;            /* 橄榄绿/绢色 */
+            --char-correct: #286638;      /* 浓竹青色 */
+            --char-incorrect: #a63a2b;    /* 胭脂朱砂红 */
+            /* --char-incorrect-bg: rgba(166, 58, 43, 0.1); */
+            --border-dashed: #cbd4c5;     /* 纸张裁切虚线 */
+            --shadow: 0 20px 50px rgba(43, 51, 36, 0.08);
+        }
+
+        /* 暮色/夜晚模式 */
+        [data-theme="dark"] {
+            --bg-global: #161615;         /* 玄黑底 */
+            --bg-container: #22211f;      /* 沉香木书榻 */
+            --bg-box: #1a1918;            /* 浅乌木内胆 */
+            --bg-input: #262523;          /* 深枯茶色 */
+            --text-main: #d9cebe;         /* 晚霞余晖色 */
+            --text-muted: #8c8172;        /* 枯茶色 */
+            --text-hint: #595248;         /* 暗色调未打字字色 */
+            --accent: #c9af8f;            /* 古铜金 */
+            --char-correct: #8eb886;      /* 苍松绿 */
+            --char-incorrect: #b55443;    /* 朱砂红 */
+            /* --char-incorrect-bg: rgba(223, 107, 87, 0.15); */
+            --border-dashed: #363431;
+            --shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        }
+
+        /* 全局样式 */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-global);
+            color: var(--text-main);
+            font-family: "PingFang SC", "Noto Serif CJK SC", "Source Han Serif SC", "STFangsong", "SimSun", serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+
+        /* 主体容器 */
+        .container {
+            width: 90%;
+            max-width: 850px;
+            background: var(--bg-container);
+            padding: 45px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            transition: background-color 0.4s ease, box-shadow 0.4s ease;
+            border: 1px solid var(--border-dashed);
+        }
+
+        /* 顶部导航栏 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-dashed);
+            padding-bottom: 15px;
+        }
+
+        h2 {
+            margin: 0;
+            font-weight: 500;
+            color: var(--accent);
+            font-size: 20px;
+            letter-spacing: 3px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        /* 按钮通用美化 */
+        .btn-action {
+            background-color: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--text-muted);
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            letter-spacing: 1px;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            font-weight: 500;
+        }
+
+        .btn-action:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+            background-color: var(--char-incorrect-bg);
+        }
+
+        /* 核心共享样式 */
+        .sync-box {
+            font-family: "FangSong", "STFangsong", "SimSun", "STSong", "Courier New", monospace;
+            font-size: 22px;
+            font-weight: 500; 
+            line-height: 1.9;
+            letter-spacing: 2px;
+            
+            width: 100%;
+            box-sizing: border-box;
+            padding: 25px;
+            text-align: left;
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+
+        /* 上方待打字文本区域包装器 */
+        .text-area-wrapper {
+            position: relative;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 20px; /* 两栏间距 */
+        }
+        .text-area-wrapper::before,
+        .text-area-wrapper::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            width: 2px;
+            height: var(--progress, 0%);
+            background: var(--accent);
+            z-index: 2;
+            pointer-events: none;
+            will-change: height;
+            transition: height 0.2s ease;
+        }
+        .text-area-wrapper::before { left: 0; }
+        .text-area-wrapper::after { right: 0; }
+
+        .text-display {
+            background-color: var(--bg-box);
+            border: 1px solid transparent;
+            border-radius: 6px;
+            min-height: 150px;
+            max-height: 260px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            position: relative; /* 保证 spans 的 offsetTop 相对其定位 */
+            z-index: 1;
+            transition: background-color 0.4s ease;
+        }
+        .text-display::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* 下方输入区域 */
+        .type-input {
+            background-color: var(--bg-input);
+            border: 1px solid transparent;
+            border-radius: 6px;
+            color: var(--text-main);
+            outline: none;
+            resize: none;
+            overflow: hidden;
+            height: 120px; 
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+
+        .type-input:focus {
+            background-color: var(--bg-input);
+        }
+
+        .type-input::placeholder {
+            color: var(--text-muted);
+            font-size: 16px;
+            font-style: italic;
+            opacity: 0.7;
+        }
+
+        /* 底部计分与进度板 */
+        .footer-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            border-top: 1px solid var(--border-dashed);
+            padding-top: 15px;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .footer-stats .stat-item strong {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        /* --- 字符状态样式 --- */
+        .char {
+            color: var(--text-hint);
+            position: relative;
+            transition: color 0.1s ease;
+        }
+
+        .char.correct {
+            color: var(--char-correct);
+            font-weight: 600;
+        }
+
+        .char.incorrect {
+            color: var(--char-incorrect);
+            background-color: var(--char-incorrect-bg);
+            border-radius: 2px;
+            font-weight: 600;
+        }
+
+        .char.current {
+            color: var(--text-main);
+            border-bottom: 3px solid var(--accent);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 顶部导航 -->
+        <div class="header">
+            <h2>印迹 · 字里行间</h2>
+            <div class="header-actions">
+                <button class="btn-action" id="themeBtn">暮色</button>
+                <button class="btn-action" id="addTextBtn">添加文本</button>
+            </div>
+        </div>
+
+        <!-- 核心练习区 -->
+        <div class="text-area-wrapper">
+            <div class="text-display sync-box" id="textDisplay"></div>
+        </div>
+        <textarea class="type-input sync-box" id="typeInput" placeholder="待到砚台墨浓，便可落笔敲击..." autocomplete="off" spellcheck="false"></textarea>
+        <input type="file" id="fileInput" accept=".txt" style="display:none">
+
+        <!-- 底部数据盘 -->
+        <div class="footer-stats">
+            <div class="stat-item">当前进度: <strong id="progressText">0%</strong></div>
+            <div class="stat-item">字数留痕: <strong id="wordCountText">0 / 0</strong></div>
+            <div class="stat-item">留痕正确率: <strong id="accuracy">100%</strong></div>
+        </div>
+    </div>
+
+    <script>
+        const textPool = [
+            "有些人的生命如同晴空，一眼望得到尽头；有些人的生命却如深谷，云雾缭绕。我们在一生中走过的路，看过的风景，最终都会化作笔尖的墨迹。",
+            "草在结它的种子，风在摇它的叶子。我们站着，不说话，就十分美好。那些关于岁月的诗篇，终究要在指尖下缓缓流章成不朽的乐章。",
+            "于千万人之中遇见你所要遇见的人，于千万年之中，时间的无涯的荒野里，没有早一步，也没有晚一步，刚巧赶上了，唯有轻轻地问一声：噢，你也在这里吗？",
+            "人生的旅途，前途很远，也很暗。然而不要怕，不怕的人面前才有路。正如那林间的暮鼓晨钟，沉闷却能穿透最浓重的晨雾。",
+            "岁月极美，在于它必然的流逝。春花，秋月，夏日，冬雪。如果你关闭了所有向外看的心窗，就无法体会到落叶在青石板上弹奏的呢喃。"
+        ];
+
+        const textDisplay = document.getElementById('textDisplay');
+        const typeInput = document.getElementById('typeInput');
+        const accuracyEl = document.getElementById('accuracy');
+        const progressTextEl = document.getElementById('progressText');
+        const wordCountTextEl = document.getElementById('wordCountText');
+        const addTextBtn = document.getElementById('addTextBtn');
+        const themeBtn = document.getElementById('themeBtn');
+        const fileInput = document.getElementById('fileInput');
+
+        // --- 核心变量 ---
+        let textChunks = [];       
+        let currentChunkIndex = 0; 
+        let globalCorrect = 0;     
+        let globalTyped = 0;       
+        let totalFullLength = 0;   // 全文总字数暂存
+        let isComposing = false;
+        const CHUNK_SIZE = 800;    
+
+        function splitTextIntoChunks(text, size) {
+            const chunks = [];
+            let start = 0;
+            
+            while (start < text.length) {
+                // 如果剩下的文本已经不足规定的尺寸，直接打包
+                if (start + size >= text.length) {
+                    chunks.push(text.slice(start));
+                    break;
+                }
+                
+                // 在目标尺寸（例如800字）附近，向后寻找最近的结束标点
+                let end = start + size;
+                const remainingText = text.slice(end);
+                
+                // 匹配最近的句号、问号、感叹号或换行符
+                const match = remainingText.match(/[。？！\n\r]/);
+                
+                if (match && match.index !== undefined) {
+                    end += match.index + 1; // 把标点符号也包含进当前段落
+                }
+                
+                chunks.push(text.slice(start, end));
+                start = end; // 下一段从这里开始
+            }
+            return chunks;
+        }
+
+        // 装载新文本
+        function loadFullText(text) {
+            // 1. 统一换行符（将 Windows 的 \r\n 或老系统的 \r 统一转为 \n）
+            text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+            // 2. 【核心修改】消除无意义的空段落
+            // 匹配：换行符 + 任意数量的半角/全角空格/制表符 + 换行符，将其强行压缩为“单个换行”
+            text = text.replace(/\n[\s　]*\n/g, '\n');
+
+            // 3. 顺手修剪掉全文开头和结尾可能存在的无用空行
+            text = text.trim();
+
+            totalFullLength = text.length; // 捕获清洗后最精准的总字数
+            textChunks = splitTextIntoChunks(text, CHUNK_SIZE);
+            currentChunkIndex = 0;
+            globalCorrect = 0;
+            globalTyped = 0;
+            accuracyEl.innerText = '100%';
+            progressTextEl.innerText = '0%';
+            wordCountTextEl.innerText = `0 / ${totalFullLength}`;
+            renderCurrentChunk();
+        }
+
+        // 渲染当前分段
+        function renderCurrentChunk() {
+            const chunkText = textChunks[currentChunkIndex] || "";
+            textDisplay.innerHTML = '';
+            typeInput.value = '';
+
+            const fragment = document.createDocumentFragment();
+            chunkText.split('').forEach((char, index) => {
+                const span = document.createElement('span');
+                span.innerText = char;
+                span.classList.add('char');
+                if (index === 0) span.classList.add('current');
+                fragment.appendChild(span);
+            });
+            textDisplay.appendChild(fragment);
+
+            // 更新大进度
+            const totalProgress = textChunks.length > 0 ? (currentChunkIndex / textChunks.length) * 100 : 0;
+            textDisplay.parentElement.style.setProperty('--progress', totalProgress + '%');
+            progressTextEl.innerText = Math.round(totalProgress) + '%';
+            
+            // 同步基础字数
+            wordCountTextEl.innerText = `${globalTyped} / ${totalFullLength}`;
+            
+            textDisplay.scrollTop = 0;
+            typeInput.focus();
+        }
+
+        function initTyping() {
+            const randomText = textPool[Math.floor(Math.random() * textPool.length)];
+            loadFullText(randomText);
+        }
+
+        function checkTyping() {
+            const spans = textDisplay.querySelectorAll('.char');
+            const inputValue = typeInput.value;
+            const chunkText = textChunks[currentChunkIndex] || "";
+            
+            let currentCorrectCount = 0;
+            let inputPos = 0;   
+            let targetPos = 0;  
+
+            while (inputPos < inputValue.length && targetPos < spans.length) {
+                const ch = inputValue[inputPos];
+                if (ch === '\n' || ch === '\r') {
+                    inputPos++;
+                    continue;
+                }
+                if (ch === spans[targetPos].innerText) {
+                    spans[targetPos].className = 'char correct';
+                    currentCorrectCount++;
+                } else {
+                    spans[targetPos].className = 'char incorrect';
+                }
+                inputPos++;
+                targetPos++;
+            }
+
+            for (let i = targetPos; i < spans.length; i++) {
+                spans[i].className = i === targetPos ? 'char current' : 'char';
+            }
+
+            // 1. 实时更新字数与正确率
+            const totalSessionTyped = globalTyped + targetPos;
+            const totalSessionCorrect = globalCorrect + currentCorrectCount;
+            
+            wordCountTextEl.innerText = `${totalSessionTyped} / ${totalFullLength}`;
+
+            if (totalSessionTyped > 0) {
+                accuracyEl.innerText = Math.round((totalSessionCorrect / totalSessionTyped) * 100) + '%';
+            } else {
+                accuracyEl.innerText = '100%';
+            }
+
+            // 2. 强力智能回弹定位算法
+            const currentSpan = textDisplay.querySelector('.char.current');
+            if (currentSpan) {
+                const containerTop = textDisplay.scrollTop;
+                const containerBottom = containerTop + textDisplay.clientHeight;
+                const spanTop = currentSpan.offsetTop;
+                const spanBottom = spanTop + currentSpan.offsetHeight;
+
+                // 检测是否由于手动滚动导致光标移出可视区（哪怕超出1像素）
+                if (spanTop < containerTop || spanBottom > containerBottom) {
+                    // 立即将正在输入的那一行平滑定位到容器居中偏上位置，确保绝对可视
+                    textDisplay.scrollTop = spanTop - (textDisplay.clientHeight / 2) + (currentSpan.offsetHeight / 2);
+                }
+            }
+
+            // 3. 进度微调
+            const chunkProgress = chunkText.length > 0 ? (targetPos / chunkText.length) : 0;
+            const overallProgress = ((currentChunkIndex + chunkProgress) / textChunks.length) * 100;
+            textDisplay.parentElement.style.setProperty('--progress', overallProgress + '%');
+            progressTextEl.innerText = Math.round(overallProgress) + '%';
+
+            // 4. 段落交接
+            if (targetPos === chunkText.length && chunkText.length > 0) {
+                globalCorrect += currentCorrectCount;
+                globalTyped += targetPos;
+
+                if (currentChunkIndex < textChunks.length - 1) {
+                    currentChunkIndex++;
+                    setTimeout(() => {
+                        renderCurrentChunk();
+                    }, 250);
+                } else {
+                    setTimeout(() => {
+                        alert(`篇章阅毕。最终留痕正确率：${accuracyEl.innerText}`);
+                        initTyping();
+                    }, 100);
+                }
+            }
+        }
+
+        // --- 事件监听保持不变 ---
+        themeBtn.addEventListener('click', () => {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (isDark) {
+                document.documentElement.removeAttribute('data-theme');
+                themeBtn.innerText = '暮色';
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                themeBtn.innerText = '晨曦';
+            }
+        });
+
+        typeInput.addEventListener('compositionstart', () => { isComposing = true; });
+        typeInput.addEventListener('compositionend', () => {
+            isComposing = false;
+            checkTyping();
+        });
+
+        typeInput.addEventListener('input', () => {
+            if (isComposing) return;
+            checkTyping();
+        });
+
+        addTextBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                let text = ev.target.result;
+                loadFullText(text);
+            };
+            reader.readAsText(file, 'UTF-8');
+            fileInput.value = '';
+        });
+
+        window.onload = initTyping;
+    </script>
+</body>
+</html>
