@@ -482,17 +482,37 @@
 
         addTextBtn.addEventListener('click', () => fileInput.click());
 
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                let text = ev.target.result;
-                loadFullText(text);
-            };
-            reader.readAsText(file, 'UTF-8');
-            fileInput.value = '';
-        });
+fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        const arrayBuffer = ev.target.result;
+        
+        // 方案：创建一个 Uint8Array 来处理原始字节流
+        const bytes = new Uint8Array(arrayBuffer);
+        
+        // 尝试解码：优先使用 GBK (适合国内老文档)，如果失败则尝试 UTF-8
+        let text;
+        try {
+            // TextDecoder 默认是 utf-8，这里强制指定 gbk
+            const decoder = new TextDecoder('gbk', { fatal: true });
+            text = decoder.decode(bytes);
+        } catch (err) {
+            // 如果 GBK 解码报错，则回退到 UTF-8
+            console.log("检测到非 GBK 编码，尝试 UTF-8 解码...");
+            const decoder = new TextDecoder('utf-8');
+            text = decoder.decode(bytes);
+        }
+
+        loadFullText(text);
+    };
+    
+    // 使用 readAsArrayBuffer 是处理编码乱码的关键
+    reader.readAsArrayBuffer(file);
+    fileInput.value = '';
+});
 
         window.onload = initTyping;
     </script>
